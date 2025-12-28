@@ -1,0 +1,424 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>ESP32 Control Panel</title>
+  <style>
+    :root { --bg:#0b1020; --card:#111833; --muted:#93a4c7; --text:#e8eeff; --accent:#6aa9ff; --good:#3ddc97; --bad:#ff6a6a; }
+    *{box-sizing:border-box;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
+    body{margin:0;background:linear-gradient(180deg,#070a14, var(--bg));color:var(--text)}
+    .wrap{max-width:1000px;margin:0 auto;padding:24px}
+    h1{margin:0 0 14px;font-size:22px}
+    .grid{display:grid;grid-template-columns:1fr;gap:12px}
+    @media (min-width:880px){ .grid{grid-template-columns:1fr 1fr} }
+    .card{background:rgba(17,24,51,.9);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:16px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+    .row{display:flex;gap:10px;align-items:center;justify-content:space-between;margin:10px 0}
+    .muted{color:var(--muted);font-size:13px}
+    input,select,button{border-radius:12px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);color:var(--text);padding:10px 12px}
+    input{width:100%}
+    button{cursor:pointer}
+    button.primary{background:rgba(106,169,255,.22);border-color:rgba(106,169,255,.35)}
+    button.good{background:rgba(61,220,151,.18);border-color:rgba(61,220,151,.35)}
+    button.bad{background:rgba(255,106,106,.16);border-color:rgba(255,106,106,.35)}
+    button:disabled{opacity:.5;cursor:not-allowed}
+    .pill{padding:6px 10px;border-radius:999px;font-size:12px;border:1px solid rgba(255,255,255,.12)}
+    .pill.good{border-color:rgba(61,220,151,.4);color:var(--good)}
+    .pill.bad{border-color:rgba(255,106,106,.4);color:var(--bad)}
+    .pill.neutral{border-color:rgba(106,169,255,.35);color:var(--accent)}
+    .split{display:grid;grid-template-columns:1fr;gap:10px}
+    @media (min-width:520px){ .split{grid-template-columns:1fr 1fr} }
+    .slider{width:100%}
+    .small{font-size:12px}
+    .topbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between;margin-bottom:12px}
+    .topbar .left{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .log{white-space:pre-wrap;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;color:#cfe1ff;max-height:160px;overflow:auto;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.08);padding:10px;border-radius:12px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="topbar">
+      <div class="left">
+        <h1>ESP32 Control Panel</h1>
+        <span id="authPill" class="pill neutral">Chưa đăng nhập</span>
+      </div>
+      <div class="left">
+        <label class="muted">Device</label>
+        <input id="deviceId" value="device1" style="width:160px" />
+        <button id="btnLogout" class="bad" disabled>Logout</button>
+      </div>
+    </div>
+
+    <div id="loginCard" class="card" style="margin-bottom:12px;">
+      <div class="row" style="margin-top:0;">
+        <div>
+          <div style="font-weight:700">Đăng nhập</div>
+          <div class="muted">Firebase Auth (email/password)</div>
+        </div>
+      </div>
+      <div class="split">
+        <div>
+          <div class="muted small">Email</div>
+          <input id="email" placeholder="you@email.com" />
+        </div>
+        <div>
+          <div class="muted small">Password</div>
+          <input id="password" type="password" placeholder="••••••••" />
+        </div>
+      </div>
+      <div class="row">
+        <button id="btnLogin" class="primary">Login</button>
+        <span class="muted small">Tip: cần bật Auth Email/Password trong Firebase Console</span>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <div style="font-weight:700;margin-bottom:6px;">Theo dõi</div>
+        <div class="row">
+          <div>
+            <div class="muted small">Nhiệt độ (sensors/tempC)</div>
+            <div id="tempC" style="font-size:28px;font-weight:800;">—</div>
+          </div>
+          <span id="tempPill" class="pill neutral">—</span>
+        </div>
+        <div class="row">
+          <div>
+            <div class="muted small">Quạt (state)</div>
+            <div id="fanState" style="font-size:18px;font-weight:700;">—</div>
+          </div>
+          <span id="fanPill" class="pill neutral">—</span>
+        </div>
+        <div class="row">
+          <div>
+            <div class="muted small">Bơm (state)</div>
+            <div id="pumpState" style="font-size:18px;font-weight:700;">—</div>
+          </div>
+          <span id="pumpPill" class="pill neutral">—</span>
+        </div>
+        <div class="row">
+          <div>
+            <div class="muted small">Lần cuối bơm chạy (lastRunIso)</div>
+            <div id="pumpLastRun" style="font-weight:700;">—</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div style="font-weight:700;margin-bottom:6px;">Servo + Feeding</div>
+
+        <div class="row">
+          <div style="flex:1">
+            <div class="muted small">Servo targetAngle</div>
+            <input id="servoSlider" class="slider" type="range" min="0" max="180" value="90" />
+            <div class="row" style="margin:6px 0 0;">
+              <span class="muted small">Target: <b id="servoTargetLabel">90</b>°</span>
+              <span class="muted small">Current: <b id="servoCurrentLabel">—</b>°</span>
+            </div>
+          </div>
+          <button id="btnSetServo" class="primary" disabled>Set</button>
+        </div>
+
+        <div class="row">
+          <button id="btnFeedNow" class="good" disabled>Feed Now</button>
+          <span class="muted small">Sẽ set feedNow=1, ESP sẽ tự ack về 0</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div style="font-weight:700;margin-bottom:6px;">Quạt (AUTO / MANUAL)</div>
+
+        <div class="row">
+          <div>
+            <div class="muted small">Mode</div>
+            <select id="fanMode" disabled>
+              <option value="auto">auto</option>
+              <option value="manual">manual</option>
+            </select>
+          </div>
+          <button id="btnSaveFanMode" class="primary" disabled>Save Mode</button>
+        </div>
+
+        <div class="row">
+          <div>
+            <div class="muted small">Manual target</div>
+            <div class="muted small">Chỉ có tác dụng khi mode=manual</div>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button id="btnFanOn" class="good" disabled>ON</button>
+            <button id="btnFanOff" class="bad" disabled>OFF</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div style="font-weight:700;margin-bottom:6px;">Bơm (AUTO / MANUAL)</div>
+
+        <div class="row">
+          <div>
+            <div class="muted small">Mode</div>
+            <select id="pumpMode" disabled>
+              <option value="auto">auto</option>
+              <option value="manual">manual</option>
+            </select>
+          </div>
+          <button id="btnSavePumpMode" class="primary" disabled>Save Mode</button>
+        </div>
+
+        <div class="row">
+          <div>
+            <div class="muted small">Manual target</div>
+            <div class="muted small">Chỉ có tác dụng khi mode=manual</div>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button id="btnPumpOn" class="good" disabled>ON</button>
+            <button id="btnPumpOff" class="bad" disabled>OFF</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:12px;">
+      <div class="row" style="margin-top:0;">
+        <div>
+          <div style="font-weight:700;">Log</div>
+          <div class="muted">Debug nhẹ (UI)</div>
+        </div>
+        <button id="btnClearLog">Clear</button>
+      </div>
+      <div id="log" class="log"></div>
+    </div>
+  </div>
+
+  <script type="module">
+    // Firebase v9 (modular) via CDN
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+    import { getDatabase, ref, onValue, set, update } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+
+    // ======= TODO: PUT YOUR FIREBASE CONFIG HERE =======
+const firebaseConfig = {
+  apiKey: "AIzaSyDvASGycQeoIyR-jpU_VziKYpCX_yORxuM",
+  authDomain: "rtos02.firebaseapp.com",
+  databaseURL: "https://rtos02-default-rtdb.firebaseio.com",
+  projectId: "rtos02",
+  storageBucket: "rtos02.firebasestorage.app",
+  messagingSenderId: "1050505054396",
+  appId: "1:1050505054396:web:c024d53ff4218d35dfe8b9"
+
+    };
+    // ================================================
+
+    const app  = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db   = getDatabase(app);
+
+    // --- UI helpers ---
+    const $ = (id) => document.getElementById(id);
+    const logEl = $("log");
+    function log(msg) {
+      const t = new Date().toLocaleTimeString();
+      logEl.textContent = `[${t}] ${msg}\n` + logEl.textContent;
+    }
+    $("btnClearLog").onclick = () => logEl.textContent = "";
+
+    function pill(el, type, text) {
+      el.classList.remove("good","bad","neutral");
+      el.classList.add(type);
+      el.textContent = text;
+    }
+
+    // --- device paths ---
+    function rootPath() {
+      const did = $("deviceId").value.trim() || "device1";
+      return `devices/${did}`;
+    }
+    const p = (sub) => `${rootPath()}/${sub}`;
+
+    // --- state ---
+    let unsubscribers = [];
+    function clearSubscriptions() {
+      unsubscribers.forEach(fn => { try { fn(); } catch(e) {} });
+      unsubscribers = [];
+    }
+
+    function setControlsEnabled(enabled) {
+      [
+        "btnLogout",
+        "btnSetServo","btnFeedNow",
+        "fanMode","btnSaveFanMode","btnFanOn","btnFanOff",
+        "pumpMode","btnSavePumpMode","btnPumpOn","btnPumpOff"
+      ].forEach(id => $(id).disabled = !enabled);
+      $("deviceId").disabled = !enabled;
+    }
+
+    // --- listeners ---
+    function subscribeDevice() {
+      clearSubscriptions();
+      log(`Subscribe: ${rootPath()}`);
+
+      // tempC
+      {
+        const r = ref(db, p("sensors/tempC"));
+        const off = onValue(r, (snap) => {
+          const v = snap.val();
+          $("tempC").textContent = (v === null || v === undefined) ? "—" : `${Number(v).toFixed(1)}°C`;
+          if (typeof v === "number") {
+            if (v >= 27) pill($("tempPill"), "bad", "HOT");
+            else if (v <= 24) pill($("tempPill"), "neutral", "COOL");
+            else pill($("tempPill"), "good", "OK");
+          } else {
+            pill($("tempPill"), "neutral", "—");
+          }
+        }, (err)=>log(`tempC listener error: ${err?.message || err}`));
+        unsubscribers.push(() => off());
+      }
+
+      // servo target & current
+      {
+        const rT = ref(db, p("servo0/targetAngle"));
+        const offT = onValue(rT, (snap) => {
+          const v = snap.val();
+          if (typeof v === "number") {
+            $("servoSlider").value = String(v);
+            $("servoTargetLabel").textContent = String(v);
+          }
+        });
+        unsubscribers.push(() => offT());
+
+        const rC = ref(db, p("servo0/currentAngle"));
+        const offC = onValue(rC, (snap) => {
+          const v = snap.val();
+          $("servoCurrentLabel").textContent = (v === null || v === undefined) ? "—" : String(v);
+        });
+        unsubscribers.push(() => offC());
+      }
+
+      // fan state + mode
+      {
+        const rS = ref(db, p("actuators/fan/state"));
+        const offS = onValue(rS, (snap) => {
+          const v = snap.val();
+          const on = (v === 1 || v === true);
+          $("fanState").textContent = on ? "ON" : "OFF";
+          pill($("fanPill"), on ? "good" : "neutral", on ? "RUNNING" : "IDLE");
+        });
+        unsubscribers.push(() => offS());
+
+        const rM = ref(db, p("actuators/fan/mode"));
+        const offM = onValue(rM, (snap) => {
+          const v = snap.val();
+          $("fanMode").value = (v === "manual") ? "manual" : "auto";
+        });
+        unsubscribers.push(() => offM());
+      }
+
+      // pump state + mode + lastRunIso
+      {
+        const rS = ref(db, p("actuators/pump/state"));
+        const offS = onValue(rS, (snap) => {
+          const v = snap.val();
+          const on = (v === 1 || v === true);
+          $("pumpState").textContent = on ? "ON" : "OFF";
+          pill($("pumpPill"), on ? "good" : "neutral", on ? "RUNNING" : "IDLE");
+        });
+        unsubscribers.push(() => offS());
+
+        const rM = ref(db, p("actuators/pump/mode"));
+        const offM = onValue(rM, (snap) => {
+          const v = snap.val();
+          $("pumpMode").value = (v === "manual") ? "manual" : "auto";
+        });
+        unsubscribers.push(() => offM());
+
+        const rL = ref(db, p("actuators/pump/lastRunIso"));
+        const offL = onValue(rL, (snap) => {
+          const v = snap.val();
+          $("pumpLastRun").textContent = (v === null || v === undefined) ? "—" : String(v);
+        });
+        unsubscribers.push(() => offL());
+      }
+    }
+
+    // --- actions ---
+    $("servoSlider").addEventListener("input", () => {
+      $("servoTargetLabel").textContent = $("servoSlider").value;
+    });
+
+    $("btnSetServo").onclick = async () => {
+      const v = Number($("servoSlider").value);
+      await set(ref(db, p("servo0/targetAngle")), v);
+      log(`SET servo0/targetAngle=${v}`);
+    };
+
+    $("btnFeedNow").onclick = async () => {
+      await set(ref(db, p("feeding/feedNow")), 1);
+      log(`SET feeding/feedNow=1`);
+    };
+
+    $("btnSaveFanMode").onclick = async () => {
+      const mode = $("fanMode").value;
+      await set(ref(db, p("actuators/fan/mode")), mode);
+      log(`SET fan/mode="${mode}"`);
+    };
+    $("btnFanOn").onclick = async () => {
+      await set(ref(db, p("actuators/fan/target")), 1);
+      log(`SET fan/target=1`);
+    };
+    $("btnFanOff").onclick = async () => {
+      await set(ref(db, p("actuators/fan/target")), 0);
+      log(`SET fan/target=0`);
+    };
+
+    $("btnSavePumpMode").onclick = async () => {
+      const mode = $("pumpMode").value;
+      await set(ref(db, p("actuators/pump/mode")), mode);
+      log(`SET pump/mode="${mode}"`);
+    };
+    $("btnPumpOn").onclick = async () => {
+      await set(ref(db, p("actuators/pump/target")), 1);
+      log(`SET pump/target=1`);
+    };
+    $("btnPumpOff").onclick = async () => {
+      await set(ref(db, p("actuators/pump/target")), 0);
+      log(`SET pump/target=0`);
+    };
+
+    // --- auth ---
+    $("btnLogin").onclick = async () => {
+      const email = $("email").value.trim();
+      const pass  = $("password").value;
+      try {
+        await signInWithEmailAndPassword(auth, email, pass);
+        log(`Login OK: ${email}`);
+      } catch (e) {
+        log(`Login FAIL: ${e?.message || e}`);
+        alert(e?.message || e);
+      }
+    };
+
+    $("btnLogout").onclick = async () => {
+      await signOut(auth);
+    };
+
+    // Re-subscribe when deviceId changes
+    $("deviceId").addEventListener("change", () => {
+      if (auth.currentUser) subscribeDevice();
+    });
+
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        pill($("authPill"), "good", "Đã đăng nhập");
+        $("loginCard").style.display = "none";
+        setControlsEnabled(true);
+        subscribeDevice();
+      } else {
+        pill($("authPill"), "neutral", "Chưa đăng nhập");
+        $("loginCard").style.display = "block";
+        setControlsEnabled(false);
+        clearSubscriptions();
+      }
+    });
+  </script>
+</body>
+</html>

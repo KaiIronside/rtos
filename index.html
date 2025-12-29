@@ -1,163 +1,224 @@
-<!doctype html>
-<html lang="vi">
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>ESP32 Control Panel - Fish Feeder</title>
-  <style>
-    :root{--bg:#0b1020;--card:#111833;--muted:#93a4c7;--text:#e8eeff;--accent:#6aa9ff;--good:#3ddc97;--bad:#ff6a6a}
-    *{box-sizing:border-box;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
-    body{margin:0;background:linear-gradient(180deg,#070a14,var(--bg));color:var(--text);min-height:100vh}
-    .wrap{max-width:1200px;margin:0 auto;padding:24px}
-    h1{margin:0 0 14px;font-size:22px}
-    .grid{display:grid;grid-template-columns:1fr;gap:12px}
-    @media (min-width:880px){.grid{grid-template-columns:1fr 1fr}}
-    .card{background:rgba(17,24,51,.9);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:16px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
-    .row{display:flex;gap:10px;align-items:center;justify-content:space-between;margin:10px 0}
-    .muted{color:var(--muted);font-size:13px}
-    input,select,button{border-radius:12px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);color:var(--text);padding:10px 12px}
-    input{width:100%}
-    button{cursor:pointer;transition:all .2s}
-    button:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 4px 12px rgba(106,169,255,.2)}
-    button.primary{background:rgba(106,169,255,.22);border-color:rgba(106,169,255,.35)}
-    button.good{background:rgba(61,220,151,.18);border-color:rgba(61,220,151,.35)}
-    button.bad{background:rgba(255,106,106,.16);border-color:rgba(255,106,106,.35)}
-    button:disabled{opacity:.5;cursor:not-allowed}
-    .pill{padding:6px 10px;border-radius:999px;font-size:12px;border:1px solid rgba(255,255,255,.12)}
-    .pill.good{border-color:rgba(61,220,151,.4);color:var(--good)}
-    .pill.bad{border-color:rgba(255,106,106,.4);color:var(--bad)}
-    .pill.neutral{border-color:rgba(106,169,255,.35);color:var(--accent)}
-    .split{display:grid;grid-template-columns:1fr;gap:10px}
-    @media (min-width:520px){.split{grid-template-columns:1fr 1fr}}
-    .small{font-size:12px}
-    .topbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between;margin-bottom:12px}
-    .topbar .left{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-    .log{white-space:pre-wrap;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;color:#cfe1ff;max-height:160px;overflow:auto;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.08);padding:10px;border-radius:12px}
-    .feeder-container{background:linear-gradient(180deg,#1a2847 0%,#0f1729 100%);border-radius:16px;padding:24px;margin:16px 0;position:relative;overflow:hidden}
-    .feeder-container::before{content:'';position:absolute;top:0;left:0;right:0;height:100%;background:radial-gradient(circle at 20% 30%,rgba(106,169,255,.08) 0%,transparent 50%),radial-gradient(circle at 80% 70%,rgba(61,220,151,.06) 0%,transparent 50%);pointer-events:none}
-    .feeder-title{font-size:18px;font-weight:700;margin-bottom:20px;text-align:center;color:var(--accent)}
-    .gauge-vertical-container{position:relative;width:200px;height:200px;margin:0 auto 20px}
-    .gauge-vertical-bg{width:200px;height:200px}
-    .gauge-vertical-needle{position:absolute;top:50%;left:50%;width:4px;height:85px;background:linear-gradient(to bottom,#ef4444 0%,#f59e0b 50%,#22c55e 100%);transform-origin:top center;transform:translate(-50%,0%) rotate(0deg);transition:transform .6s cubic-bezier(.4,0,.2,1);border-radius:2px;box-shadow:0 0 15px rgba(106,169,255,.6);z-index:10}
-    .gauge-vertical-needle::before{content:'';position:absolute;bottom:-10px;left:-6px;width:16px;height:16px;background:var(--accent);border-radius:50%;box-shadow:0 0 20px rgba(106,169,255,.8),0 2px 8px rgba(0,0,0,.4);border:2px solid rgba(255,255,255,.3)}
-    .gauge-vertical-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:24px;height:24px;background:radial-gradient(circle,#1e293b 0%,#0f172a 100%);border-radius:50%;border:3px solid rgba(106,169,255,.6);box-shadow:0 0 20px rgba(106,169,255,.4),inset 0 2px 6px rgba(0,0,0,.5);z-index:15}
-    .gauge-labels-vertical{position:absolute;width:100%;height:100%;top:0;left:0}
-    .gauge-label{position:absolute;font-size:13px;font-weight:700;color:var(--muted);text-shadow:0 1px 3px rgba(0,0,0,.5)}
-    .gauge-label.top{top:-5px;left:50%;transform:translateX(-50%)}
-    .gauge-label.left{top:50%;left:-5px;transform:translateY(-50%)}
-    .gauge-label.bottom{bottom:-5px;left:50%;transform:translateX(-50%)}
-    .feeder-status{text-align:center;margin:20px 0}
-    .feeder-angle{font-size:48px;font-weight:800;background:linear-gradient(135deg,var(--accent) 0%,#3ddc97 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:10px}
-    .feeder-state{display:inline-block;padding:8px 20px;border-radius:999px;font-size:16px;font-weight:600}
-    .feeder-state.feeding{background:rgba(61,220,151,.2);border:1px solid rgba(61,220,151,.4);color:var(--good)}
-    .feeder-state.closed{background:rgba(255,106,106,.18);border:1px solid rgba(255,106,106,.35);color:var(--bad)}
-    .servo-slider-container{margin:20px 0}
-    .servo-slider-label{display:flex;justify-content:space-between;margin-bottom:10px;font-size:13px}
-    input[type="range"]{width:100%;height:8px;background:linear-gradient(to right,#22c55e 0%,#f59e0b 50%,#ef4444 100%);border-radius:5px;outline:none;-webkit-appearance:none;cursor:pointer;border:none}
-    input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:22px;height:22px;background:var(--accent);border:3px solid rgba(255,255,255,.3);border-radius:50%;cursor:pointer;box-shadow:0 0 15px rgba(106,169,255,.6),0 2px 8px rgba(0,0,0,.3);transition:all .2s}
-    input[type="range"]::-webkit-slider-thumb:hover{transform:scale(1.15);box-shadow:0 0 20px rgba(106,169,255,.8),0 4px 12px rgba(0,0,0,.4)}
-    input[type="range"]::-moz-range-thumb{width:22px;height:22px;background:var(--accent);border:3px solid rgba(255,255,255,.3);border-radius:50%;cursor:pointer;box-shadow:0 0 15px rgba(106,169,255,.6),0 2px 8px rgba(0,0,0,.3)}
-    .fish-emoji{position:absolute;font-size:24px;opacity:.4;animation:float 6s infinite ease-in-out}
-    @keyframes float{0%,100%{transform:translateY(0) translateX(0)}25%{transform:translateY(-10px) translateX(5px)}50%{transform:translateY(-5px) translateX(-5px)}75%{transform:translateY(-12px) translateX(3px)}}
-    .fish-1{top:20px;left:20px;animation-delay:0s}
-    .fish-2{top:40px;right:30px;animation-delay:-2s}
-    .fish-3{bottom:30px;left:40px;animation-delay:-4s}
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fish Tank</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+        body {
+            background: linear-gradient(to bottom, #1a4d6d 0%, #0a2342 100%);
+            cursor: none;
+        }
+        canvas {
+            display: block;
+        }
+        .cursor {
+            position: fixed;
+            width: 20px;
+            height: 20px;
+            background: radial-gradient(circle, rgba(255,255,100,0.8), transparent);
+            border-radius: 50%;
+            pointer-events: none;
+            transform: translate(-50%, -50%);
+            z-index: 1000;
+        }
+    </style>
 </head>
 <body>
-  <div class="wrap">
-    <div class="topbar">
-      <div class="left">
-        <h1>🐠 ESP32 Control Panel</h1>
-        <span id="authPill" class="pill neutral">Chưa đăng nhập</span>
-      </div>
-      <div class="left">
-        <label class="muted">Device</label>
-        <input id="deviceId" value="device1" style="width:160px" />
-        <button id="btnLogout" class="bad" disabled>Logout</button>
-      </div>
-    </div>
+    <canvas id="tank"></canvas>
+    <div class="cursor" id="cursor"></div>
 
-    <div id="loginCard" class="card" style="margin-bottom:12px">
-      <div class="row" style="margin-top:0">
-        <div>
-          <div style="font-weight:700">Đăng nhập</div>
-          <div class="muted">Firebase Auth</div>
-        </div>
-      </div>
-      <div class="split">
-        <div><div class="muted small">Email</div><input id="email" placeholder="you@email.com" /></div>
-        <div><div class="muted small">Password</div><input id="password" type="password" placeholder="••••••••" /></div>
-      </div>
-      <div class="row"><button id="btnLogin" class="primary">Login</button></div>
-    </div>
+    <script>
+        const canvas = document.getElementById('tank');
+        const ctx = canvas.getContext('2d');
+        const cursor = document.getElementById('cursor');
+        
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
 
-    <div class="grid">
-      <div class="card">
-        <div class="feeder-container">
-          <div class="fish-emoji fish-1">🐟</div>
-          <div class="fish-emoji fish-2">🐠</div>
-          <div class="fish-emoji fish-3">🐡</div>
-          <div class="feeder-title">🍽️ Hệ thống cho cá ăn</div>
-          <div class="gauge-vertical-container">
-            <svg class="gauge-vertical-bg" viewBox="0 0 200 200">
-              <circle cx="100" cy="100" r="90" fill="none" stroke="rgba(255,255,255,.05)" stroke-width="16"/>
-              <path d="M 100 10 A 90 90 0 0 0 10 100" fill="none" stroke="rgba(61,220,151,.3)" stroke-width="16" stroke-linecap="round"/>
-              <path d="M 10 100 A 90 90 0 0 0 100 190" fill="none" stroke="rgba(255,106,106,.3)" stroke-width="16" stroke-linecap="round"/>
-            </svg>
-            <div class="gauge-vertical-needle" id="gaugeNeedle"></div>
-            <div class="gauge-vertical-center"></div>
-            <div class="gauge-labels-vertical">
-              <span class="gauge-label top">0°</span>
-              <span class="gauge-label left">90°</span>
-              <span class="gauge-label bottom">180°</span>
-            </div>
-          </div>
-          <div class="feeder-status">
-            <div class="feeder-angle" id="feederAngle">90°</div>
-            <div class="feeder-state closed" id="feederState">🚫 Đã đóng</div>
-          </div>
-          <div class="servo-slider-container">
-            <div class="servo-slider-label">
-              <span class="muted">Target: <b id="servoTargetLabel">90</b>°</span>
-              <span class="muted">ESP: <b id="servoCurrentLabel">—</b>°</span>
-            </div>
-            <input id="servoSlider" type="range" min="0" max="180" value="90" />
-          </div>
-          <button id="btnSetServo" class="primary" disabled style="width:100%">Cập nhật góc</button>
-          <button id="btnFeedNow" class="good" disabled style="width:100%;margin-top:8px">🍽️ Cho ăn ngay</button>
-        </div>
-      </div>
+        let mouseX = canvas.width / 2;
+        let mouseY = canvas.height / 2;
 
-      <div class="card">
-        <div style="font-weight:700;margin-bottom:6px">📊 Theo dõi</div>
-        <div class="row"><div><div class="muted small">Nhiệt độ</div><div id="tempC" style="font-size:28px;font-weight:800">—</div></div><span id="tempPill" class="pill neutral">—</span></div>
-        <div class="row"><div><div class="muted small">Quạt</div><div id="fanState" style="font-size:18px;font-weight:700">—</div></div><span id="fanPill" class="pill neutral">—</span></div>
-        <div class="row"><div><div class="muted small">Bơm</div><div id="pumpState" style="font-size:18px;font-weight:700">—</div></div><span id="pumpPill" class="pill neutral">—</span></div>
-        <div class="row"><div><div class="muted small">Lần cuối bơm chạy</div><div id="pumpLastRun" style="font-weight:700">—</div></div></div>
-      </div>
+        // Fish class
+        class Fish {
+            constructor() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.size = Math.random() * 15 + 10;
+                this.speedX = 0;
+                this.speedY = 0;
+                this.hue = Math.random() * 60 + 180; // Blue-green spectrum
+                this.angle = 0;
+                this.tailAngle = 0;
+                this.tailSpeed = Math.random() * 0.2 + 0.1;
+            }
 
-      <div class="card">
-        <div style="font-weight:700;margin-bottom:6px">💨 Quạt</div>
-        <div class="row"><div><div class="muted small">Mode</div><select id="fanMode" disabled><option value="auto">auto</option><option value="manual">manual</option></select></div><button id="btnSaveFanMode" class="primary" disabled>Save</button></div>
-        <div class="row"><div><div class="muted small">Manual target</div></div><div style="display:flex;gap:8px"><button id="btnFanOn" class="good" disabled>ON</button><button id="btnFanOff" class="bad" disabled>OFF</button></div></div>
-      </div>
+            update() {
+                // Calculate direction to mouse
+                const dx = mouseX - this.x;
+                const dy = mouseY - this.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                // Follow mouse with easing
+                const attraction = 0.0008;
+                this.speedX += dx * attraction;
+                this.speedY += dy * attraction;
+                
+                // Add some friction
+                this.speedX *= 0.95;
+                this.speedY *= 0.95;
+                
+                // Limit speed
+                const maxSpeed = 4;
+                const speed = Math.sqrt(this.speedX * this.speedX + this.speedY * this.speedY);
+                if (speed > maxSpeed) {
+                    this.speedX = (this.speedX / speed) * maxSpeed;
+                    this.speedY = (this.speedY / speed) * maxSpeed;
+                }
+                
+                this.x += this.speedX;
+                this.y += this.speedY;
+                
+                // Wrap around screen
+                if (this.x < -50) this.x = canvas.width + 50;
+                if (this.x > canvas.width + 50) this.x = -50;
+                if (this.y < -50) this.y = canvas.height + 50;
+                if (this.y > canvas.height + 50) this.y = -50;
+                
+                // Calculate angle based on movement
+                this.angle = Math.atan2(this.speedY, this.speedX);
+                this.tailAngle += this.tailSpeed;
+            }
 
-      <div class="card">
-        <div style="font-weight:700;margin-bottom:6px">💧 Bơm</div>
-        <div class="row"><div><div class="muted small">Mode</div><select id="pumpMode" disabled><option value="auto">auto</option><option value="manual">manual</option></select></div><button id="btnSavePumpMode" class="primary" disabled>Save</button></div>
-        <div class="row"><div><div class="muted small">Manual target</div></div><div style="display:flex;gap:8px"><button id="btnPumpOn" class="good" disabled>ON</button><button id="btnPumpOff" class="bad" disabled>OFF</button></div></div>
-      </div>
-    </div>
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.angle);
+                
+                // Fish body
+                ctx.fillStyle = `hsl(${this.hue}, 70%, 60%)`;
+                ctx.beginPath();
+                ctx.ellipse(0, 0, this.size, this.size * 0.6, 0, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Tail
+                const tailWag = Math.sin(this.tailAngle) * 0.3;
+                ctx.fillStyle = `hsl(${this.hue}, 70%, 50%)`;
+                ctx.beginPath();
+                ctx.moveTo(-this.size, 0);
+                ctx.lineTo(-this.size * 1.8, -this.size * 0.5 + tailWag * this.size);
+                ctx.lineTo(-this.size * 1.8, this.size * 0.5 + tailWag * this.size);
+                ctx.closePath();
+                ctx.fill();
+                
+                // Eye
+                ctx.fillStyle = 'white';
+                ctx.beginPath();
+                ctx.arc(this.size * 0.4, -this.size * 0.2, this.size * 0.15, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.fillStyle = 'black';
+                ctx.beginPath();
+                ctx.arc(this.size * 0.4, -this.size * 0.2, this.size * 0.08, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Fins
+                ctx.fillStyle = `hsl(${this.hue}, 60%, 55%)`;
+                ctx.globalAlpha = 0.6;
+                ctx.beginPath();
+                ctx.ellipse(0, this.size * 0.5, this.size * 0.4, this.size * 0.3, Math.PI * 0.3, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.restore();
+            }
+        }
 
-    <div class="card" style="margin-top:12px">
-      <div class="row" style="margin-top:0"><div><div style="font-weight:700">📝 Log</div></div><button id="btnClearLog">Clear</button></div>
-      <div id="log" class="log"></div>
-    </div>
-  </div>
+        // Create bubbles
+        class Bubble {
+            constructor() {
+                this.x = Math.random() * canvas.width;
+                this.y = canvas.height + 10;
+                this.size = Math.random() * 4 + 2;
+                this.speed = Math.random() * 1 + 0.5;
+                this.wobble = Math.random() * Math.PI * 2;
+                this.wobbleSpeed = Math.random() * 0.05 + 0.02;
+            }
 
-  <script type="module">
-    import{initializeApp as i}from"https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";import{getAuth as a,signInWithEmailAndPassword as s,onAuthStateChanged as o,signOut as n}from"https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";import{getDatabase as r,ref as d,onValue as l,set as c}from"https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";const h={apiKey:"AIzaSyDvASGycQeoIyR-jpU_VziKYpCX_yORxuM",authDomain:"rtos02.firebaseapp.com",databaseURL:"https://rtos02-default-rtdb.firebaseio.com",projectId:"rtos02",storageBucket:"rtos02.firebasestorage.app",messagingSenderId:"1050505054396",appId:"1:1050505054396:web:c024d53ff4218d35dfe8b9"},p=i(h),u=a(p),g=r(p),e=e=>document.getElementById(e),m=e("log");function b(e){const t=new Date().toLocaleTimeString();m.textContent=`[${t}] ${e}\n`+m.textContent}function f(e,t,a){e.classList.remove("good","bad","neutral"),e.classList.add(t),e.textContent=a}function v(t){e("feederAngle").textContent=t+"°",e("gaugeNeedle").style.transform=`translate(-50%, 0%) rotate(${t}deg)`;const a=e("feederState");t<90?(a.textContent="🍽️ Cá đang ăn",a.className="feeder-state feeding"):(a.textContent="🚫 Đã đóng",a.className="feeder-state closed")}function y(){return`devices/${e("deviceId").value.trim()||"device1"}`}const w=(e,t)=>`${y()}/${e}`;let x=[];function A(){x.forEach(e=>{try{e()}catch(e){}}),x=[]}function S(t){["btnLogout","btnSetServo","btnFeedNow","fanMode","btnSaveFanMode","btnFanOn","btnFanOff","pumpMode","btnSavePumpMode","btnPumpOn","btnPumpOff"].forEach(a=>e(a).disabled=!t),e("deviceId").disabled=!t}function C(){A(),b(`Subscribe: ${y()}`);{const t=d(g,w("sensors/tempC")),a=l(t,t=>{const a=t.val();if(e("tempC").textContent=null===a||void 0===a?"—":`${Number(a).toFixed(1)}°C`,"number"==typeof a)a>=27?f(e("tempPill"),"bad","HOT"):a<=24?f(e("tempPill"),"neutral","COOL"):f(e("tempPill"),"good","OK");else f(e("tempPill"),"neutral","—")},e=>b(`tempC listener error: ${e?.message||e}`));x.push(()=>a())}{const t=d(g,w("servo0/targetAngle")),a=l(t,t=>{const a=t.val();"number"==typeof a&&(e("servoSlider").value=String(a),e("servoTargetLabel").textContent=String(a),v(a))});x.push(()=>a());const s=d(g,w("servo0/currentAngle")),o=l(s,t=>{const a=t.val();e("servoCurrentLabel").textContent=null===a||void 0===a?"—":String(a)});x.push(()=>o())}{const t=d(g,w("actuators/fan/state")),a=l(t,t=>{const a=t.val(),s=1===a||!0===a;e("fanState").textContent=s?"ON":"OFF",f(e("fanPill"),s?"good":"neutral",s?"RUNNING":"IDLE")});x.push(()=>a());const s=d(g,w("actuators/fan/mode")),o=l(s,t=>{const a=t.val();e("fanMode").value="manual"===a?"manual":"auto"});x.push(()=>o())}{const t=d(g,w("actuators/pump/state")),a=l(t,t=>{const a=t.val(),s=1===a||!0===a;e("pumpState").textContent=s?"ON":"OFF",f(e("pumpPill"),s?"good":"neutral",s?"RUNNING":"IDLE")});x.push(()=>a());const s=d(g,w("actuators/pump/mode")),o=l(s,t=>{const a=t.val();e("pumpMode").value="manual"===a?"manual":"auto"});x.push(()=>o());const n=d(g,w("actuators/pump/lastRunIso")),r=l(n,t=>{const a=t.val();e("pumpLastRun").textContent=null===a||void 0===a?"—":String(a)});x.push(()=>r())}}e("btnClearLog").onclick=()=>m.textContent="",e("servoSlider").addEventListener("input",()=>{const t=Number(e("servoSlider").value);e("servoTargetLabel").textContent=t,v(t)}),e("btnSetServo").onclick=async()=>{const t=Number(e("servoSlider").value);await c(d(g,w("servo0/targetAngle")),t),b(`SET servo0/targetAngle=${t}`)},e("btnFeedNow").onclick=async()=>{await c(d(g,w("feeding/feedNow")),1),b("SET feeding/feedNow=1")},e("btnSaveFanMode").onclick=async()=>{const t=e("fanMode").value;await c(d(g,w("actuators/fan/mode")),t),b(`SET fan/mode="${t}"`)},e("btnFanOn").onclick=async()=>{await c(d(g,w("actuators/fan/target")),1),b("SET fan/target=1")},e("btnFanOff").onclick=async()=>{await c(d(g,w("actuators/fan/target")),0),b("SET fan/target=0")},e("btnSavePumpMode").onclick=async()=>{const t=e("pumpMode").value;await c(d(g,w("actuators/pump/mode")),t),b(`SET pump/mode="${t}"`)},e("btnPumpOn").onclick=async()=>{await c(d(g,w("actuators/pump/target")),1),b("SET pump/target=1")},e("btnPumpOff").onclick=async()=>{await c(d(g,w("actuators/pump/target")),0),b("SET pump/target=0")},e("btnLogin").onclick=async()=>{const t=e("email").value.trim(),a=e("password").value;try{await s(u,t,a),b(`Login OK: ${t}`)}catch(e){b(`Login FAIL: ${e?.message||e}`),alert(e?.message||e)}},e("btnLogout").onclick=async()=>{await n(u)},e("deviceId").addEventListener("change",()=>{u.currentUser&&C()}),o(u,t=>{t?(f(e("authPill"),"good","Đã đăng nhập"),e("loginCard").style.display="none",S(!0),C()):(f(e("authPill"),"neutral","Chưa đăng nhập"),e("loginCard").style.display="block",S(!1),A())}),v(90);
-  </script>
+            update() {
+                this.y -= this.speed;
+                this.wobble += this.wobbleSpeed;
+                this.x += Math.sin(this.wobble) * 0.5;
+                
+                if (this.y < -10) {
+                    this.y = canvas.height + 10;
+                    this.x = Math.random() * canvas.width;
+                }
+            }
+
+            draw() {
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+            }
+        }
+
+        // Create fish and bubbles
+        const fish = [];
+        const fishCount = 30; // Lots of fish!
+        for (let i = 0; i < fishCount; i++) {
+            fish.push(new Fish());
+        }
+
+        const bubbles = [];
+        for (let i = 0; i < 50; i++) {
+            bubbles.push(new Bubble());
+        }
+
+        // Mouse tracking
+        document.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+            cursor.style.left = e.clientX + 'px';
+            cursor.style.top = e.clientY + 'px';
+        });
+
+        // Animation loop
+        function animate() {
+            ctx.fillStyle = 'rgba(10, 35, 66, 0.1)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw bubbles
+            bubbles.forEach(bubble => {
+                bubble.update();
+                bubble.draw();
+            });
+            
+            // Draw fish
+            fish.forEach(f => {
+                f.update();
+                f.draw();
+            });
+            
+            requestAnimationFrame(animate);
+        }
+
+        // Handle resize
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+
+        animate();
+    </script>
 </body>
 </html>

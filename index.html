@@ -1,83 +1,77 @@
 <!doctype html>
 <html lang="vi">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>ESP32 Control Panel</title>
   <style>
     :root{--bg:#0b1020;--card:#111833;--muted:#93a4c7;--text:#e8eeff;--accent:#6aa9ff;--good:#3ddc97;--bad:#ff6a6a}
     *{box-sizing:border-box;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial;margin:0;padding:0}
     body{background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:var(--text);min-height:100vh;padding:20px}
     .container{max-width:1200px;margin:0 auto}
-    .card{background:rgba(255,255,255,.95);border-radius:20px;padding:30px;box-shadow:0 20px 60px rgba(0,0,0,.3);backdrop-filter:blur(10px)}
     .hidden{display:none}
     
-    /* LOGIN */
     .login-container{max-width:400px;margin:100px auto}
+    .card{background:rgba(255,255,255,.95);border-radius:20px;padding:30px;box-shadow:0 20px 60px rgba(0,0,0,.3)}
     h2{color:#2563eb;text-align:center;margin-bottom:10px;font-size:28px}
     .subtitle{text-align:center;color:#64748b;margin-bottom:25px;font-size:14px}
+    .device-choice{display:flex;gap:10px;margin-bottom:20px}
+    .device-btn{flex:1;padding:15px;border:2px solid #e2e8f0;border-radius:10px;background:white;cursor:pointer;transition:all .3s;display:flex;flex-direction:column;align-items:center;gap:5px}
+    .device-btn:hover{border-color:#3b82f6;background:#f0f9ff}
+    .device-btn.active{border-color:#3b82f6;background:#dbeafe}
+    .device-btn .icon{font-size:32px}
+    .device-btn .label{font-size:14px;color:#64748b;font-weight:600}
     .input-group{margin-bottom:15px}
-    input[type="email"],input[type="password"]{width:100%;padding:12px 15px;border:2px solid #e2e8f0;border-radius:10px;font-size:16px;transition:border-color .3s}
+    input[type="email"],input[type="password"]{width:100%;padding:12px 15px;border:2px solid #e2e8f0;border-radius:10px;font-size:16px}
     input[type="email"]:focus,input[type="password"]:focus{outline:none;border-color:#3b82f6}
     button{padding:12px;border:none;border-radius:10px;font-size:16px;font-weight:600;cursor:pointer;transition:all .3s}
     .btn-primary{width:100%;background:linear-gradient(135deg,#3b82f6 0%,#2563eb 100%);color:white;margin-top:10px}
     .btn-primary:hover{transform:translateY(-2px);box-shadow:0 5px 15px rgba(59,130,246,.4)}
     .btn-secondary{width:100%;background:white;color:#3b82f6;border:2px solid #3b82f6;margin-top:10px}
-    .btn-secondary:hover{background:#f0f9ff}
     .error{color:#ef4444;font-size:14px;margin-top:10px;text-align:center}
     
-    /* HEADER */
     .header{text-align:center;margin-bottom:30px}
     .header h2{color:white;font-size:32px;text-shadow:0 2px 10px rgba(0,0,0,.2)}
-    .user-info{background:rgba(255,255,255,.2);backdrop-filter:blur(10px);color:white;padding:15px 20px;border-radius:15px;margin-top:15px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}
-    .user-info .device-select{display:flex;align-items:center;gap:10px}
+    .user-info{background:rgba(255,255,255,.2);color:white;padding:15px 20px;border-radius:15px;margin-top:15px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}
     .user-info input{width:150px;padding:8px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.2);color:white;font-size:14px}
-    .user-info input::placeholder{color:rgba(255,255,255,.7)}
     .btn-logout{padding:8px 20px;background:rgba(255,255,255,.3);color:white;font-size:14px}
-    .btn-logout:hover{background:rgba(255,255,255,.4);transform:none}
     
-    /* GRID */
     .grid{display:grid;grid-template-columns:1fr;gap:20px;margin-top:20px}
-    @media (min-width:880px){.grid{grid-template-columns:1fr 1fr}}
+    @media(min-width:880px){.grid.desktop-mode{grid-template-columns:1fr 1fr}}
     
-    /* FEEDER CARD */
-    .feeder-card{background:rgba(255,255,255,.95);border-radius:20px;padding:25px;box-shadow:0 10px 30px rgba(0,0,0,.2)}
-    .card-title{font-size:20px;font-weight:bold;color:#1e293b;margin-bottom:15px;text-align:center}
-    .aquarium-container{background:linear-gradient(180deg,#e0f2fe 0%,#bae6fd 50%,#7dd3fc 100%);border-radius:15px;padding:20px;margin-bottom:15px;position:relative;overflow:hidden;box-shadow:inset 0 2px 10px rgba(0,0,0,.1);min-height:300px}
+    .feeder-card{background:#0f1419;border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:25px;box-shadow:0 10px 30px rgba(0,0,0,.4)}
+    .card-title{font-size:20px;font-weight:bold;color:#e8eeff;margin-bottom:15px;text-align:center}
+    .aquarium-container{background:linear-gradient(180deg,#e0f2fe 0%,#bae6fd 50%,#7dd3fc 100%);border-radius:15px;padding:20px;margin-bottom:15px;position:relative;overflow:hidden;min-height:300px}
     .fish{position:absolute;font-size:25px;animation:swim 8s infinite ease-in-out}
     @keyframes swim{0%,100%{transform:translateX(0) scaleX(1)}50%{transform:translateX(150px) scaleX(-1)}}
     .gauge-container{position:relative;width:240px;height:140px;margin:15px auto}
     .gauge-bg{width:240px;height:120px}
-    .gauge-needle{position:absolute;bottom:20px;left:50%;width:3px;height:85px;background:linear-gradient(to top,#ef4444 0%,#f59e0b 50%,#22c55e 100%);transform-origin:bottom center;transform:translateX(-50%) rotate(-90deg);transition:transform .5s cubic-bezier(.4,0,.2,1);border-radius:2px;box-shadow:0 0 10px rgba(0,0,0,.3)}
-    .gauge-needle::after{content:'';position:absolute;top:-6px;left:-3px;width:9px;height:9px;background:#1e293b;border-radius:50%;box-shadow:0 2px 5px rgba(0,0,0,.3)}
-    .gauge-center{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);width:16px;height:16px;background:#1e293b;border-radius:50%;border:2px solid white;box-shadow:0 2px 5px rgba(0,0,0,.3);z-index:10}
-    .gauge-labels{position:absolute;bottom:10px;width:100%;display:flex;justify-content:space-between;padding:0 15px;font-size:11px;font-weight:600;color:#475569}
+    .gauge-needle{position:absolute;bottom:20px;left:50%;width:3px;height:85px;background:linear-gradient(to top,#ef4444 0%,#f59e0b 50%,#22c55e 100%);transform-origin:bottom center;transform:translateX(-50%) rotate(-90deg);transition:transform .5s;border-radius:2px}
+    .gauge-center{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);width:16px;height:16px;background:#1e293b;border-radius:50%;border:2px solid white;z-index:10}
+    .gauge-labels{position:absolute;bottom:10px;width:100%;display:flex;justify-content:space-between;padding:0 15px;font-size:11px;color:#475569}
     .status-display{text-align:center;margin:15px 0}
-    .angle-display{font-size:36px;font-weight:bold;color:#1e293b;margin-bottom:8px}
+    .angle-display{font-size:36px;font-weight:bold;color:#e8eeff;margin-bottom:8px}
     .status-text{font-size:16px;font-weight:600;padding:8px 16px;border-radius:10px;display:inline-block}
     .status-feeding{background:#dcfce7;color:#16a34a}
     .status-closed{background:#fee2e2;color:#dc2626}
-    .control-section{background:white;padding:15px;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.05)}
-    .control-title{font-size:14px;font-weight:600;color:#334155;margin-bottom:12px;text-align:center}
+    .control-section{background:rgba(255,255,255,.08);padding:15px;border-radius:12px;border:1px solid rgba(255,255,255,.1)}
+    .control-title{font-size:14px;font-weight:600;color:#e8eeff;margin-bottom:12px;text-align:center}
     input[type="range"]{width:100%;height:6px;background:linear-gradient(to right,#22c55e 0%,#f59e0b 50%,#ef4444 100%);border-radius:5px;outline:none;-webkit-appearance:none;cursor:pointer;margin:15px 0}
-    input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;background:white;border:3px solid #3b82f6;border-radius:50%;cursor:pointer;box-shadow:0 2px 5px rgba(0,0,0,.2);transition:all .3s}
-    input[type="range"]::-webkit-slider-thumb:hover{transform:scale(1.2);box-shadow:0 4px 10px rgba(59,130,246,.4)}
-    input[type="range"]::-moz-range-thumb{width:20px;height:20px;background:white;border:3px solid #3b82f6;border-radius:50%;cursor:pointer;box-shadow:0 2px 5px rgba(0,0,0,.2)}
-    .current-angle-info{margin-top:12px;padding:8px;background:#f1f5f9;border-radius:8px;text-align:center;font-size:12px;color:#64748b}
-    .current-angle-value{font-weight:bold;color:#1e293b}
+    input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;background:white;border:3px solid #3b82f6;border-radius:50%;cursor:pointer}
+    .current-angle-info{margin-top:12px;padding:8px;background:rgba(255,255,255,.05);border-radius:8px;text-align:center;font-size:12px;color:#93a4c7}
+    .current-angle-value{font-weight:bold;color:#e8eeff}
     .bubble{position:absolute;bottom:0;width:8px;height:8px;background:rgba(255,255,255,.5);border-radius:50%;animation:rise 4s infinite ease-in}
     @keyframes rise{0%{bottom:0;opacity:0}50%{opacity:1}100%{bottom:100%;opacity:0}}
     .bubble:nth-child(1){left:10%;animation-delay:0s}
-    .bubble:nth-child(2){left:30%;animation-delay:1s;width:6px;height:6px}
+    .bubble:nth-child(2){left:30%;animation-delay:1s}
     .bubble:nth-child(3){left:50%;animation-delay:2s}
-    .bubble:nth-child(4){left:70%;animation-delay:.5s;width:10px;height:10px}
+    .bubble:nth-child(4){left:70%;animation-delay:.5s}
     .bubble:nth-child(5){left:85%;animation-delay:1.5s}
+    .cursor-fish{position:fixed;pointer-events:none;font-size:24px;z-index:9999}
     .btn-feed{width:100%;background:linear-gradient(135deg,#22c55e 0%,#16a34a 100%);color:white;margin-top:10px}
-    .btn-feed:hover{transform:translateY(-2px);box-shadow:0 5px 15px rgba(34,197,94,.4)}
     
-    /* MONITOR CARD */
-    .monitor-card{background:rgba(17,24,51,.9);border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:20px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
-    .monitor-card .card-title{color:var(--accent)}
+    .monitor-card,.control-card{background:rgba(17,24,51,.9);border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:20px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+    .monitor-card .card-title,.control-card .card-title{color:var(--accent)}
     .monitor-row{display:flex;justify-content:space-between;align-items:center;margin:15px 0;padding:12px;background:rgba(255,255,255,.05);border-radius:10px}
     .monitor-label{color:var(--muted);font-size:13px}
     .monitor-value{font-size:24px;font-weight:800;color:var(--text)}
@@ -85,26 +79,18 @@
     .pill.good{border-color:rgba(61,220,151,.4);color:var(--good)}
     .pill.bad{border-color:rgba(255,106,106,.4);color:var(--bad)}
     .pill.neutral{border-color:rgba(106,169,255,.35);color:var(--accent)}
-    
-    /* CONTROL CARDS */
-    .control-card{background:rgba(17,24,51,.9);border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:20px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
-    .control-card .card-title{color:var(--accent)}
     .control-row{display:flex;justify-content:space-between;align-items:center;margin:12px 0;gap:10px}
     select{padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);color:var(--text);cursor:pointer}
     .btn-group{display:flex;gap:8px}
     .btn-small{padding:8px 16px;font-size:14px}
     .btn-good{background:rgba(61,220,151,.18);border:1px solid rgba(61,220,151,.35);color:var(--good)}
-    .btn-good:hover{background:rgba(61,220,151,.25)}
     .btn-bad{background:rgba(255,106,106,.16);border:1px solid rgba(255,106,106,.35);color:var(--bad)}
-    .btn-bad:hover{background:rgba(255,106,106,.25)}
     
-    /* LOG */
-    .log-card{background:rgba(17,24,51,.9);border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:20px;box-shadow:0 10px 30px rgba(0,0,0,.25);margin-top:20px}
+    .log-card{background:rgba(17,24,51,.9);border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:20px;margin-top:20px}
     .log-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
     .log-title{font-weight:700;color:var(--accent)}
-    .log{white-space:pre-wrap;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;color:#cfe1ff;max-height:160px;overflow:auto;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.08);padding:10px;border-radius:12px}
-    .btn-clear{padding:6px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);color:var(--text);font-size:12px}
-    .btn-clear:hover{background:rgba(255,255,255,.1)}
+    .log{white-space:pre-wrap;font-family:monospace;font-size:12px;color:#cfe1ff;max-height:160px;overflow:auto;background:rgba(0,0,0,.25);padding:10px;border-radius:12px}
+    .btn-clear{padding:6px 12px;border-radius:8px;background:rgba(255,255,255,.06);color:var(--text);font-size:12px}
   </style>
 </head>
 <body>
@@ -112,6 +98,16 @@
     <div class="card">
       <h2>🐠 ESP32 Control Panel</h2>
       <p class="subtitle">Hệ thống điều khiển hồ cá từ xa</p>
+      <div class="device-choice">
+        <button type="button" class="device-btn active" data-device="desktop">
+          <div class="icon">💻</div>
+          <div class="label">Máy tính</div>
+        </button>
+        <button type="button" class="device-btn" data-device="mobile">
+          <div class="icon">📱</div>
+          <div class="label">Điện thoại</div>
+        </button>
+      </div>
       <div class="input-group"><input type="email" id="email" placeholder="Email"></div>
       <div class="input-group"><input type="password" id="password" placeholder="Mật khẩu"></div>
       <button id="loginBtn" class="btn-primary">Đăng nhập</button>
@@ -125,7 +121,7 @@
       <h2>🐠 ESP32 Control Panel</h2>
       <div class="user-info">
         <span id="userEmail"></span>
-        <div class="device-select">
+        <div style="display:flex;align-items:center;gap:10px">
           <label style="font-size:14px">Device:</label>
           <input id="deviceId" value="device1" placeholder="device1">
         </div>
@@ -133,7 +129,7 @@
       </div>
     </div>
 
-    <div class="grid">
+    <div class="grid desktop-mode">
       <div class="feeder-card">
         <div class="card-title">🍽️ Hệ thống cho cá ăn</div>
         <div class="aquarium-container">
@@ -221,17 +217,56 @@
     </div>
   </div>
 
+  <div class="cursor-fish" id="cursorFish1">🐟</div>
+  <div class="cursor-fish" id="cursorFish2">🐠</div>
+
   <script type="module">
-    import{initializeApp as i}from"https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";import{getAuth as a,signInWithEmailAndPassword as s,onAuthStateChanged as o,signOut as n}from"https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";import{getDatabase as r,ref as d,onValue as l,set as c}from"https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
-    const h={apiKey:"AIzaSyDvASGycQeoIyR-jpU_VziKYpCX_yORxuM",authDomain:"rtos02.firebaseapp.com",databaseURL:"https://rtos02-default-rtdb.firebaseio.com",projectId:"rtos02",storageBucket:"rtos02.firebasestorage.app",messagingSenderId:"1050505054396",appId:"1:1050505054396:web:c024d53ff4218d35dfe8b9"},p=i(h),u=a(p),g=r(p),e=e=>document.getElementById(e),m=e("log");
-    function b(e){m.textContent=`[${new Date().toLocaleTimeString()}] ${e}\n`+m.textContent}
-    function f(e,t,a){e.classList.remove("good","bad","neutral"),e.classList.add(t),e.textContent=a}
-    function v(t){e("angleDisplay").textContent=t+"°",e("gaugeNeedle").style.transform=`translateX(-50%) rotate(${t-90}deg)`;const a=e("statusText");t<90?(a.textContent="🍽️ Cá đang ăn",a.className="status-text status-feeding"):(a.textContent="🚫 Đã đóng",a.className="status-text status-closed")}
-    function y(){return`devices/${e("deviceId").value.trim()||"device1"}`}
-    const w=e=>`${y()}/${e}`;let x=[];
-    function A(){x.forEach(e=>{try{e()}catch(e){}}),x=[]}
-    function C(){A(),b(`Subscribe: ${y()}`);{const t=d(g,w("sensors/tempC")),a=l(t,t=>{const a=t.val();if(e("tempC").textContent=null==a?"—":`${Number(a).toFixed(1)}°C`,"number"==typeof a)a>=27?f(e("tempPill"),"bad","HOT"):a<=24?f(e("tempPill"),"neutral","COOL"):f(e("tempPill"),"good","OK");else f(e("tempPill"),"neutral","—")},e=>b(`Error: ${e?.message||e}`));x.push(()=>a())}{const t=d(g,w("servo0/targetAngle")),a=l(t,t=>{const a=t.val();"number"==typeof a&&(e("angleSlider").value=String(a),v(a))});x.push(()=>a());const s=d(g,w("servo0/currentAngle")),o=l(s,t=>{e("currentAngle").textContent=null==t.val()?"—":String(t.val())});x.push(()=>o())}{const t=d(g,w("actuators/fan/state")),a=l(t,t=>{const a=1===t.val()||!0===t.val();e("fanState").textContent=a?"ON":"OFF",f(e("fanPill"),a?"good":"neutral",a?"RUNNING":"IDLE")});x.push(()=>a());const s=d(g,w("actuators/fan/mode")),o=l(s,t=>{e("fanMode").value="manual"===t.val()?"manual":"auto"});x.push(()=>o())}{const t=d(g,w("actuators/pump/state")),a=l(t,t=>{const a=1===t.val()||!0===t.val();e("pumpState").textContent=a?"ON":"OFF",f(e("pumpPill"),a?"good":"neutral",a?"RUNNING":"IDLE")});x.push(()=>a());const s=d(g,w("actuators/pump/mode")),o=l(s,t=>{e("pumpMode").value="manual"===t.val()?"manual":"auto"});x.push(()=>o());const n=d(g,w("actuators/pump/lastRunIso")),r=l(n,t=>{e("pumpLastRun").textContent=null==t.val()?"—":String(t.val())});x.push(()=>r())}}
-    e("btnClearLog").onclick=()=>m.textContent="",e("angleSlider").addEventListener("input",()=>{const t=Number(e("angleSlider").value);v(t),c(d(g,w("servo0/targetAngle")),t),b(`Servo: ${t}°`)}),e("btnFeedNow").onclick=async()=>{await c(d(g,w("feeding/feedNow")),1),b("Feed now!")},e("fanMode").addEventListener("change",async()=>{const t=e("fanMode").value;await c(d(g,w("actuators/fan/mode")),t),b(`Fan mode: ${t}`)}),e("btnFanOn").onclick=async()=>{await c(d(g,w("actuators/fan/target")),1),b("Fan: ON")},e("btnFanOff").onclick=async()=>{await c(d(g,w("actuators/fan/target")),0),b("Fan: OFF")},e("pumpMode").addEventListener("change",async()=>{const t=e("pumpMode").value;await c(d(g,w("actuators/pump/mode")),t),b(`Pump mode: ${t}`)}),e("btnPumpOn").onclick=async()=>{await c(d(g,w("actuators/pump/target")),1),b("Pump: ON")},e("btnPumpOff").onclick=async()=>{await c(d(g,w("actuators/pump/target")),0),b("Pump: OFF")},e("loginBtn").onclick=async()=>{const t=e("email").value.trim(),a=e("password").value;try{await s(u,t,a),b("Login OK")}catch(t){e("loginError").textContent=t?.message||t,b("Login failed")}},e("signupBtn").onclick=async()=>{const t=e("email").value.trim(),a=e("password").value;try{await(async(e,t,a)=>{const s=await fetch("https://identitytoolkit.googleapis.com/v1/accounts:signUp?key="+h.apiKey,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:t,password:a,returnSecureToken:!0})});if(!s.ok)throw new Error((await s.json()).error?.message||"Signup failed");return await s.json()})(0,t,a),await s(u,t,a),b("Signup OK")}catch(t){e("loginError").textContent=t?.message||t,b("Signup failed")}},e("logoutBtn").onclick=async()=>{await n(u),b("Logged out")},e("deviceId").addEventListener("change",()=>{u.currentUser&&C()}),o(u,t=>{t?(e("loginCard").classList.add("hidden"),e("controlSection").classList.remove("hidden"),e("userEmail").textContent=t.email,C(),b("Logged in")):(e("controlSection").classList.add("hidden"),e("loginCard").classList.remove("hidden"),A())}),v(90);
+    import{initializeApp}from"https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+    import{getAuth,signInWithEmailAndPassword,onAuthStateChanged,signOut,createUserWithEmailAndPassword}from"https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+    import{getDatabase,ref,onValue,set}from"https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+    
+    const config={apiKey:"AIzaSyDvASGycQeoIyR-jpU_VziKYpCX_yORxuM",authDomain:"rtos02.firebaseapp.com",databaseURL:"https://rtos02-default-rtdb.firebaseio.com",projectId:"rtos02",storageBucket:"rtos02.firebasestorage.app",messagingSenderId:"1050505054396",appId:"1:1050505054396:web:c024d53ff4218d35dfe8b9"};
+    const app=initializeApp(config);
+    const auth=getAuth(app);
+    const db=getDatabase(app);
+    const $=id=>document.getElementById(id);
+    const logEl=$("log");
+    let deviceMode="desktop";
+    
+    function log(msg){logEl.textContent=`[${new Date().toLocaleTimeString()}] ${msg}\n`+logEl.textContent}
+    function setPill(el,cls,txt){el.classList.remove("good","bad","neutral");el.classList.add(cls);el.textContent=txt}
+    function updateAngle(angle){$("angleDisplay").textContent=angle+"°";$("gaugeNeedle").style.transform=`translateX(-50%) rotate(${angle-90}deg)`;const st=$("statusText");if(angle<90){st.textContent="🍽️ Cá đang ăn";st.className="status-text status-feeding"}else{st.textContent="🚫 Đã đóng";st.className="status-text status-closed"}}
+    function getDevicePath(){return`devices/${$("deviceId").value.trim()||"device1"}`}
+    const makePath=p=>`${getDevicePath()}/${p}`;
+    let listeners=[];
+    function unsubAll(){listeners.forEach(u=>{try{u()}catch(e){}});listeners=[]}
+    function subscribe(){unsubAll();log(`Subscribe: ${getDevicePath()}`);const add=(path,cb)=>{const u=onValue(ref(db,makePath(path)),cb,e=>log(`Error: ${e?.message||e}`));listeners.push(()=>u())};add("sensors/tempC",s=>{const v=s.val();$("tempC").textContent=v==null?"—":`${Number(v).toFixed(1)}°C`;if(typeof v==="number"){if(v>=27)setPill($("tempPill"),"bad","HOT");else if(v<=24)setPill($("tempPill"),"neutral","COOL");else setPill($("tempPill"),"good","OK")}else setPill($("tempPill"),"neutral","—")});add("servo0/targetAngle",s=>{const v=s.val();if(typeof v==="number"){$("angleSlider").value=String(v);updateAngle(v)}});add("servo0/currentAngle",s=>{$("currentAngle").textContent=s.val()==null?"—":String(s.val())});add("actuators/fan/state",s=>{const on=s.val()===1||s.val()===true;$("fanState").textContent=on?"ON":"OFF";setPill($("fanPill"),on?"good":"neutral",on?"RUNNING":"IDLE")});add("actuators/fan/mode",s=>{$("fanMode").value=s.val()==="manual"?"manual":"auto"});add("actuators/pump/state",s=>{const on=s.val()===1||s.val()===true;$("pumpState").textContent=on?"ON":"OFF";setPill($("pumpPill"),on?"good":"neutral",on?"RUNNING":"IDLE")});add("actuators/pump/mode",s=>{$("pumpMode").value=s.val()==="manual"?"manual":"auto"});add("actuators/pump/lastRunIso",s=>{$("pumpLastRun").textContent=s.val()==null?"—":String(s.val())})}
+    
+    $("btnClearLog").onclick=()=>logEl.textContent="";
+    $("angleSlider").addEventListener("input",()=>{const a=Number($("angleSlider").value);updateAngle(a);set(ref(db,makePath("servo0/targetAngle")),a);log(`Servo: ${a}°`)});
+    $("btnFeedNow").onclick=async()=>{await set(ref(db,makePath("feeding/feedNow")),1);log("Feed now!")};
+    $("fanMode").addEventListener("change",async()=>{const m=$("fanMode").value;await set(ref(db,makePath("actuators/fan/mode")),m);log(`Fan mode: ${m}`)});
+    $("btnFanOn").onclick=async()=>{await set(ref(db,makePath("actuators/fan/target")),1);log("Fan: ON")};
+    $("btnFanOff").onclick=async()=>{await set(ref(db,makePath("actuators/fan/target")),0);log("Fan: OFF")};
+    $("pumpMode").addEventListener("change",async()=>{const m=$("pumpMode").value;await set(ref(db,makePath("actuators/pump/mode")),m);log(`Pump mode: ${m}`)});
+    $("btnPumpOn").onclick=async()=>{await set(ref(db,makePath("actuators/pump/target")),1);log("Pump: ON")};
+    $("btnPumpOff").onclick=async()=>{await set(ref(db,makePath("actuators/pump/target")),0);log("Pump: OFF")};
+    
+    $("loginBtn").onclick=async()=>{const e=$("email").value.trim(),p=$("password").value;try{await signInWithEmailAndPassword(auth,e,p);log("Login OK")}catch(err){$("loginError").textContent=err?.message||err;log("Login failed")}};
+    $("signupBtn").onclick=async()=>{const e=$("email").value.trim(),p=$("password").value;try{await createUserWithEmailAndPassword(auth,e,p);log("Signup OK")}catch(err){$("loginError").textContent=err?.message||err;log("Signup failed")}};
+    $("logoutBtn").onclick=async()=>{await signOut(auth);log("Logged out")};
+    $("deviceId").addEventListener("change",()=>{if(auth.currentUser)subscribe()});
+    
+    onAuthStateChanged(auth,user=>{if(user){$("loginCard").classList.add("hidden");$("controlSection").classList.remove("hidden");$("userEmail").textContent=user.email;document.querySelector(".grid").className=deviceMode==="mobile"?"grid mobile-mode":"grid desktop-mode";subscribe();log("Logged in")}else{$("controlSection").classList.add("hidden");$("loginCard").classList.remove("hidden");unsubAll()}});
+    
+    document.querySelectorAll(".device-btn").forEach(btn=>{btn.addEventListener("click",()=>{document.querySelectorAll(".device-btn").forEach(b=>b.classList.remove("active"));btn.classList.add("active");deviceMode=btn.dataset.device;log(`Device mode: ${deviceMode}`)})});
+    
+    const fish1=$("cursorFish1"),fish2=$("cursorFish2");
+    let mouseX=0,mouseY=0,f1X=0,f1Y=0,f2X=0,f2Y=0,lastX=0;
+    document.addEventListener("mousemove",e=>{mouseX=e.clientX;mouseY=e.clientY;if(e.clientX<lastX){fish1.style.transform="scaleX(-1)";fish2.style.transform="scaleX(-1)"}else{fish1.style.transform="scaleX(1)";fish2.style.transform="scaleX(1)"}lastX=e.clientX});
+    function animate(){f1X+=(mouseX-f1X-30)*.08;f1Y+=(mouseY-f1Y-30)*.08;f2X+=(mouseX-f2X-60)*.06;f2Y+=(mouseY-f2Y-60)*.06;fish1.style.left=f1X+"px";fish1.style.top=f1Y+"px";fish2.style.left=f2X+"px";fish2.style.top=f2Y+"px";requestAnimationFrame(animate)}
+    animate();
+    updateAngle(90);
   </script>
 </body>
 </html>

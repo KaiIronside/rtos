@@ -1,224 +1,213 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html lang="vi">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fish Tank</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            overflow: hidden;
-        }
-        body {
-            background: linear-gradient(to bottom, #1a4d6d 0%, #0a2342 100%);
-            cursor: none;
-        }
-        canvas {
-            display: block;
-        }
-        .cursor {
-            position: fixed;
-            width: 20px;
-            height: 20px;
-            background: radial-gradient(circle, rgba(255,255,100,0.8), transparent);
-            border-radius: 50%;
-            pointer-events: none;
-            transform: translate(-50%, -50%);
-            z-index: 1000;
-        }
-    </style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>ESP32 Fish Feeder - 2 Hồ</title>
+  <style>
+    :root{--bg:#0b1020;--card:#111833;--muted:#93a4c7;--text:#e8eeff;--accent:#6aa9ff;--good:#3ddc97;--bad:#ff6a6a}
+    *{box-sizing:border-box;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial;margin:0;padding:0}
+    body{background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:var(--text);min-height:100vh;padding:20px}
+    .container{max-width:1200px;margin:0 auto}
+    .card{background:rgba(255,255,255,.95);border-radius:20px;padding:30px;box-shadow:0 20px 60px rgba(0,0,0,.3);backdrop-filter:blur(10px)}
+    .hidden{display:none}
+    .login-container{max-width:400px;margin:100px auto}
+    h2{color:#2563eb;text-align:center;margin-bottom:10px;font-size:28px}
+    .subtitle{text-align:center;color:#64748b;margin-bottom:25px;font-size:14px}
+    .input-group{margin-bottom:15px}
+    input[type="email"],input[type="password"]{width:100%;padding:12px 15px;border:2px solid #e2e8f0;border-radius:10px;font-size:16px;transition:border-color .3s}
+    input[type="email"]:focus,input[type="password"]:focus{outline:none;border-color:#3b82f6}
+    button{width:100%;padding:12px;border:none;border-radius:10px;font-size:16px;font-weight:600;cursor:pointer;transition:all .3s;margin-top:10px}
+    #loginBtn{background:linear-gradient(135deg,#3b82f6 0%,#2563eb 100%);color:white}
+    #loginBtn:hover{transform:translateY(-2px);box-shadow:0 5px 15px rgba(59,130,246,.4)}
+    #signupBtn{background:white;color:#3b82f6;border:2px solid #3b82f6}
+    #signupBtn:hover{background:#f0f9ff}
+    .error{color:#ef4444;font-size:14px;margin-top:10px;text-align:center}
+    .header{text-align:center;margin-bottom:30px}
+    .header h2{color:white;font-size:32px;text-shadow:0 2px 10px rgba(0,0,0,.2)}
+    .user-info{background:rgba(255,255,255,.2);backdrop-filter:blur(10px);color:white;padding:15px 20px;border-radius:15px;margin-top:15px;display:flex;justify-content:space-between;align-items:center}
+    #logoutBtn{width:auto;padding:8px 20px;margin:0;background:rgba(255,255,255,.3);color:white;font-size:14px}
+    #logoutBtn:hover{background:rgba(255,255,255,.4);transform:none}
+    .aquarium-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(450px,1fr));gap:25px;margin-top:20px}
+    @media (max-width:1000px){.aquarium-grid{grid-template-columns:1fr}}
+    .aquarium-card{background:rgba(255,255,255,.95);border-radius:20px;padding:25px;box-shadow:0 10px 30px rgba(0,0,0,.2)}
+    .aquarium-header{text-align:center;margin-bottom:20px}
+    .aquarium-title{font-size:24px;font-weight:bold;color:#1e293b;margin-bottom:5px}
+    .pond-label{display:inline-block;padding:5px 15px;background:linear-gradient(135deg,#0ea5e9 0%,#06b6d4 100%);color:white;border-radius:20px;font-size:14px;font-weight:600}
+    .aquarium-container{background:linear-gradient(180deg,#e0f2fe 0%,#bae6fd 50%,#7dd3fc 100%);border-radius:15px;padding:20px;margin-bottom:20px;position:relative;overflow:hidden;box-shadow:inset 0 2px 10px rgba(0,0,0,.1)}
+    .fish{position:absolute;font-size:25px;animation:swim 8s infinite ease-in-out}
+    @keyframes swim{0%,100%{transform:translateX(0) scaleX(1)}50%{transform:translateX(150px) scaleX(-1)}}
+    .gauge-container{position:relative;width:240px;height:140px;margin:15px auto}
+    .gauge-bg{width:240px;height:120px}
+    .gauge-needle{position:absolute;bottom:20px;left:50%;width:3px;height:85px;background:linear-gradient(to top,#ef4444 0%,#f59e0b 50%,#22c55e 100%);transform-origin:bottom center;transform:translateX(-50%) rotate(-90deg);transition:transform .5s cubic-bezier(.4,0,.2,1);border-radius:2px;box-shadow:0 0 10px rgba(0,0,0,.3)}
+    .gauge-needle::after{content:'';position:absolute;top:-6px;left:-3px;width:9px;height:9px;background:#1e293b;border-radius:50%;box-shadow:0 2px 5px rgba(0,0,0,.3)}
+    .gauge-center{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);width:16px;height:16px;background:#1e293b;border-radius:50%;border:2px solid white;box-shadow:0 2px 5px rgba(0,0,0,.3);z-index:10}
+    .gauge-labels{position:absolute;bottom:10px;width:100%;display:flex;justify-content:space-between;padding:0 15px;font-size:11px;font-weight:600;color:#475569}
+    .status-display{text-align:center;margin:15px 0}
+    .angle-display{font-size:36px;font-weight:bold;color:#1e293b;margin-bottom:8px}
+    .status-text{font-size:16px;font-weight:600;padding:8px 16px;border-radius:10px;display:inline-block}
+    .status-feeding{background:#dcfce7;color:#16a34a}
+    .status-closed{background:#fee2e2;color:#dc2626}
+    .control-section{background:white;padding:15px;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.05)}
+    .control-title{font-size:14px;font-weight:600;color:#334155;margin-bottom:12px;text-align:center}
+    .slider-container{position:relative;padding:15px 0}
+    input[type="range"]{width:100%;height:6px;background:linear-gradient(to right,#22c55e 0%,#f59e0b 50%,#ef4444 100%);border-radius:5px;outline:none;-webkit-appearance:none;cursor:pointer}
+    input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:20px;height:20px;background:white;border:3px solid #3b82f6;border-radius:50%;cursor:pointer;box-shadow:0 2px 5px rgba(0,0,0,.2);transition:all .3s}
+    input[type="range"]::-webkit-slider-thumb:hover{transform:scale(1.2);box-shadow:0 4px 10px rgba(59,130,246,.4)}
+    input[type="range"]::-moz-range-thumb{width:20px;height:20px;background:white;border:3px solid #3b82f6;border-radius:50%;cursor:pointer;box-shadow:0 2px 5px rgba(0,0,0,.2)}
+    .current-angle-info{margin-top:12px;padding:8px;background:#f1f5f9;border-radius:8px;text-align:center;font-size:12px;color:#64748b}
+    .current-angle-value{font-weight:bold;color:#1e293b}
+    .bubble{position:absolute;bottom:0;width:8px;height:8px;background:rgba(255,255,255,.5);border-radius:50%;animation:rise 4s infinite ease-in}
+    @keyframes rise{0%{bottom:0;opacity:0}50%{opacity:1}100%{bottom:100%;opacity:0}}
+    .bubble:nth-child(1){left:10%;animation-delay:0s}
+    .bubble:nth-child(2){left:30%;animation-delay:1s;width:6px;height:6px}
+    .bubble:nth-child(3){left:50%;animation-delay:2s}
+    .bubble:nth-child(4){left:70%;animation-delay:.5s;width:10px;height:10px}
+    .bubble:nth-child(5){left:85%;animation-delay:1.5s}
+    .log-section{margin-top:20px;background:rgba(17,24,51,.9);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:16px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+    .log-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+    .log-title{font-weight:700;color:var(--accent)}
+    .log{white-space:pre-wrap;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;color:#cfe1ff;max-height:160px;overflow:auto;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.08);padding:10px;border-radius:12px}
+    .btn-log{padding:6px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);color:var(--text);cursor:pointer;font-size:12px}
+    .btn-log:hover{background:rgba(255,255,255,.1)}
+  </style>
 </head>
 <body>
-    <canvas id="tank"></canvas>
-    <div class="cursor" id="cursor"></div>
+  <div id="loginCard" class="login-container">
+    <div class="card">
+      <h2>🐠 Hệ thống cho cá ăn</h2>
+      <p class="subtitle">Quản lý 2 hồ cá từ xa</p>
+      <div class="input-group"><input type="email" id="email" placeholder="Email"></div>
+      <div class="input-group"><input type="password" id="password" placeholder="Mật khẩu"></div>
+      <button id="loginBtn">Đăng nhập</button>
+      <button id="signupBtn">Đăng ký</button>
+      <p id="loginError" class="error"></p>
+    </div>
+  </div>
 
-    <script>
-        const canvas = document.getElementById('tank');
-        const ctx = canvas.getContext('2d');
-        const cursor = document.getElementById('cursor');
-        
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
+  <div id="controlSection" class="container hidden">
+    <div class="header">
+      <h2>🐠 Hệ thống cho cá ăn tự động</h2>
+      <div class="user-info">
+        <span id="userEmail"></span>
+        <button id="logoutBtn">Đăng xuất</button>
+      </div>
+    </div>
 
-        let mouseX = canvas.width / 2;
-        let mouseY = canvas.height / 2;
+    <div class="aquarium-grid">
+      <div class="aquarium-card">
+        <div class="aquarium-header">
+          <div class="aquarium-title">🏠 Hồ cá số 1</div>
+          <span class="pond-label">Servo 0</span>
+        </div>
+        <div class="aquarium-container">
+          <div class="fish" style="top:15px">🐟</div>
+          <div class="fish" style="top:50px;animation-delay:-4s">🐠</div>
+          <div class="bubble"></div>
+          <div class="bubble"></div>
+          <div class="bubble"></div>
+          <div class="bubble"></div>
+          <div class="bubble"></div>
+          <div class="gauge-container">
+            <svg class="gauge-bg" viewBox="0 0 240 120">
+              <path d="M 20 100 A 100 100 0 0 1 220 100" fill="none" stroke="#e2e8f0" stroke-width="18" stroke-linecap="round"/>
+              <path d="M 20 100 A 100 100 0 0 1 120 10" fill="none" stroke="#22c55e" stroke-width="18" stroke-linecap="round" opacity="0.3"/>
+              <path d="M 120 10 A 100 100 0 0 1 220 100" fill="none" stroke="#ef4444" stroke-width="18" stroke-linecap="round" opacity="0.3"/>
+            </svg>
+            <div class="gauge-needle" id="gaugeNeedle0"></div>
+            <div class="gauge-center"></div>
+            <div class="gauge-labels"><span>0°</span><span>90°</span><span>180°</span></div>
+          </div>
+          <div class="status-display">
+            <div class="angle-display" id="angleDisplay0">90°</div>
+            <div class="status-text" id="statusText0">Đã đóng</div>
+          </div>
+        </div>
+        <div class="control-section">
+          <div class="control-title">🎮 Điều khiển góc mở</div>
+          <div class="slider-container">
+            <input type="range" id="angleSlider0" min="0" max="180" value="90">
+          </div>
+          <div class="current-angle-info">Góc hiện tại: <span class="current-angle-value" id="currentAngle0">-</span>°</div>
+        </div>
+      </div>
 
-        // Fish class
-        class Fish {
-            constructor() {
-                this.x = Math.random() * canvas.width;
-                this.y = Math.random() * canvas.height;
-                this.size = Math.random() * 15 + 10;
-                this.speedX = 0;
-                this.speedY = 0;
-                this.hue = Math.random() * 60 + 180; // Blue-green spectrum
-                this.angle = 0;
-                this.tailAngle = 0;
-                this.tailSpeed = Math.random() * 0.2 + 0.1;
-            }
+      <div class="aquarium-card">
+        <div class="aquarium-header">
+          <div class="aquarium-title">🏠 Hồ cá số 2</div>
+          <span class="pond-label">Servo 1</span>
+        </div>
+        <div class="aquarium-container">
+          <div class="fish" style="top:15px;animation-delay:-2s">🐡</div>
+          <div class="fish" style="top:50px;animation-delay:-6s">🐠</div>
+          <div class="bubble"></div>
+          <div class="bubble"></div>
+          <div class="bubble"></div>
+          <div class="bubble"></div>
+          <div class="bubble"></div>
+          <div class="gauge-container">
+            <svg class="gauge-bg" viewBox="0 0 240 120">
+              <path d="M 20 100 A 100 100 0 0 1 220 100" fill="none" stroke="#e2e8f0" stroke-width="18" stroke-linecap="round"/>
+              <path d="M 20 100 A 100 100 0 0 1 120 10" fill="none" stroke="#22c55e" stroke-width="18" stroke-linecap="round" opacity="0.3"/>
+              <path d="M 120 10 A 100 100 0 0 1 220 100" fill="none" stroke="#ef4444" stroke-width="18" stroke-linecap="round" opacity="0.3"/>
+            </svg>
+            <div class="gauge-needle" id="gaugeNeedle1"></div>
+            <div class="gauge-center"></div>
+            <div class="gauge-labels"><span>0°</span><span>90°</span><span>180°</span></div>
+          </div>
+          <div class="status-display">
+            <div class="angle-display" id="angleDisplay1">90°</div>
+            <div class="status-text" id="statusText1">Đã đóng</div>
+          </div>
+        </div>
+        <div class="control-section">
+          <div class="control-title">🎮 Điều khiển góc mở</div>
+          <div class="slider-container">
+            <input type="range" id="angleSlider1" min="0" max="180" value="90">
+          </div>
+          <div class="current-angle-info">Góc hiện tại: <span class="current-angle-value" id="currentAngle1">-</span>°</div>
+        </div>
+      </div>
+    </div>
 
-            update() {
-                // Calculate direction to mouse
-                const dx = mouseX - this.x;
-                const dy = mouseY - this.y;
-                const distance = Math.sqrt(dx * dx + dy * dy);
-                
-                // Follow mouse with easing
-                const attraction = 0.0008;
-                this.speedX += dx * attraction;
-                this.speedY += dy * attraction;
-                
-                // Add some friction
-                this.speedX *= 0.95;
-                this.speedY *= 0.95;
-                
-                // Limit speed
-                const maxSpeed = 4;
-                const speed = Math.sqrt(this.speedX * this.speedX + this.speedY * this.speedY);
-                if (speed > maxSpeed) {
-                    this.speedX = (this.speedX / speed) * maxSpeed;
-                    this.speedY = (this.speedY / speed) * maxSpeed;
-                }
-                
-                this.x += this.speedX;
-                this.y += this.speedY;
-                
-                // Wrap around screen
-                if (this.x < -50) this.x = canvas.width + 50;
-                if (this.x > canvas.width + 50) this.x = -50;
-                if (this.y < -50) this.y = canvas.height + 50;
-                if (this.y > canvas.height + 50) this.y = -50;
-                
-                // Calculate angle based on movement
-                this.angle = Math.atan2(this.speedY, this.speedX);
-                this.tailAngle += this.tailSpeed;
-            }
+    <div class="log-section">
+      <div class="log-header">
+        <div class="log-title">📝 Log hệ thống</div>
+        <button class="btn-log" id="btnClearLog">Clear</button>
+      </div>
+      <div id="log" class="log"></div>
+    </div>
+  </div>
 
-            draw() {
-                ctx.save();
-                ctx.translate(this.x, this.y);
-                ctx.rotate(this.angle);
-                
-                // Fish body
-                ctx.fillStyle = `hsl(${this.hue}, 70%, 60%)`;
-                ctx.beginPath();
-                ctx.ellipse(0, 0, this.size, this.size * 0.6, 0, 0, Math.PI * 2);
-                ctx.fill();
-                
-                // Tail
-                const tailWag = Math.sin(this.tailAngle) * 0.3;
-                ctx.fillStyle = `hsl(${this.hue}, 70%, 50%)`;
-                ctx.beginPath();
-                ctx.moveTo(-this.size, 0);
-                ctx.lineTo(-this.size * 1.8, -this.size * 0.5 + tailWag * this.size);
-                ctx.lineTo(-this.size * 1.8, this.size * 0.5 + tailWag * this.size);
-                ctx.closePath();
-                ctx.fill();
-                
-                // Eye
-                ctx.fillStyle = 'white';
-                ctx.beginPath();
-                ctx.arc(this.size * 0.4, -this.size * 0.2, this.size * 0.15, 0, Math.PI * 2);
-                ctx.fill();
-                
-                ctx.fillStyle = 'black';
-                ctx.beginPath();
-                ctx.arc(this.size * 0.4, -this.size * 0.2, this.size * 0.08, 0, Math.PI * 2);
-                ctx.fill();
-                
-                // Fins
-                ctx.fillStyle = `hsl(${this.hue}, 60%, 55%)`;
-                ctx.globalAlpha = 0.6;
-                ctx.beginPath();
-                ctx.ellipse(0, this.size * 0.5, this.size * 0.4, this.size * 0.3, Math.PI * 0.3, 0, Math.PI * 2);
-                ctx.fill();
-                
-                ctx.restore();
-            }
-        }
-
-        // Create bubbles
-        class Bubble {
-            constructor() {
-                this.x = Math.random() * canvas.width;
-                this.y = canvas.height + 10;
-                this.size = Math.random() * 4 + 2;
-                this.speed = Math.random() * 1 + 0.5;
-                this.wobble = Math.random() * Math.PI * 2;
-                this.wobbleSpeed = Math.random() * 0.05 + 0.02;
-            }
-
-            update() {
-                this.y -= this.speed;
-                this.wobble += this.wobbleSpeed;
-                this.x += Math.sin(this.wobble) * 0.5;
-                
-                if (this.y < -10) {
-                    this.y = canvas.height + 10;
-                    this.x = Math.random() * canvas.width;
-                }
-            }
-
-            draw() {
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-                ctx.fill();
-                
-                ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
-                ctx.lineWidth = 1;
-                ctx.stroke();
-            }
-        }
-
-        // Create fish and bubbles
-        const fish = [];
-        const fishCount = 30; // Lots of fish!
-        for (let i = 0; i < fishCount; i++) {
-            fish.push(new Fish());
-        }
-
-        const bubbles = [];
-        for (let i = 0; i < 50; i++) {
-            bubbles.push(new Bubble());
-        }
-
-        // Mouse tracking
-        document.addEventListener('mousemove', (e) => {
-            mouseX = e.clientX;
-            mouseY = e.clientY;
-            cursor.style.left = e.clientX + 'px';
-            cursor.style.top = e.clientY + 'px';
-        });
-
-        // Animation loop
-        function animate() {
-            ctx.fillStyle = 'rgba(10, 35, 66, 0.1)';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            
-            // Draw bubbles
-            bubbles.forEach(bubble => {
-                bubble.update();
-                bubble.draw();
-            });
-            
-            // Draw fish
-            fish.forEach(f => {
-                f.update();
-                f.draw();
-            });
-            
-            requestAnimationFrame(animate);
-        }
-
-        // Handle resize
-        window.addEventListener('resize', () => {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-        });
-
-        animate();
-    </script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+  <script>
+    const firebaseConfig={apiKey:"AIzaSyDvASGycQeoIyR-jpU_VziKYpCX_yORxuM",authDomain:"rtos02.firebaseapp.com",databaseURL:"https://rtos02-default-rtdb.firebaseio.com",projectId:"rtos02",storageBucket:"rtos02.firebasestorage.app",messagingSenderId:"1050505054396",appId:"1:1050505054396:web:c024d53ff4218d35dfe8b9"};
+    firebase.initializeApp(firebaseConfig);
+    const auth=firebase.auth(),db=firebase.database(),DEVICE_ID="device1";
+    const $=e=>document.getElementById(e),loginCard=$("loginCard"),controlSection=$("controlSection"),emailInput=$("email"),passwordInput=$("password"),loginBtn=$("loginBtn"),signupBtn=$("signupBtn"),loginError=$("loginError"),userEmailSpan=$("userEmail"),logoutBtn=$("logoutBtn"),angleSlider0=$("angleSlider0"),angleDisplay0=$("angleDisplay0"),statusText0=$("statusText0"),currentAngleSpan0=$("currentAngle0"),gaugeNeedle0=$("gaugeNeedle0"),angleSlider1=$("angleSlider1"),angleDisplay1=$("angleDisplay1"),statusText1=$("statusText1"),currentAngleSpan1=$("currentAngle1"),gaugeNeedle1=$("gaugeNeedle1"),logEl=$("log");
+    
+    function log(e){const t=new Date().toLocaleTimeString();logEl.textContent=`[${t}] ${e}\n`+logEl.textContent}
+    $("btnClearLog").onclick=()=>logEl.textContent="";
+    
+    function updateUI(e,t){const a=0===e?angleDisplay0:angleDisplay1,n=0===e?statusText0:statusText1,s=0===e?gaugeNeedle0:gaugeNeedle1;a.textContent=t+"°";const o=t-90;s.style.transform=`translateX(-50%) rotate(${o}deg)`,t<90?(n.textContent="🍽️ Cá đang ăn",n.className="status-text status-feeding"):(n.textContent="🚫 Đã đóng",n.className="status-text status-closed")}
+    
+    auth.onAuthStateChanged(e=>{e?(loginCard.classList.add("hidden"),controlSection.classList.remove("hidden"),userEmailSpan.textContent=e.email,attachDatabaseListeners(),log("Đã đăng nhập: "+e.email)):(controlSection.classList.add("hidden"),loginCard.classList.remove("hidden"))});
+    
+    loginBtn.onclick=()=>{const e=emailInput.value.trim(),t=passwordInput.value.trim();loginError.textContent="",e&&t?auth.signInWithEmailAndPassword(e,t).catch(e=>{loginError.textContent=e.message,log("Lỗi đăng nhập: "+e.message)}):loginError.textContent="Vui lòng nhập email và mật khẩu"};
+    
+    signupBtn.onclick=()=>{const e=emailInput.value.trim(),t=passwordInput.value.trim();loginError.textContent="",e&&t?auth.createUserWithEmailAndPassword(e,t).catch(e=>{loginError.textContent=e.message,log("Lỗi đăng ký: "+e.message)}):loginError.textContent="Vui lòng nhập email và mật khẩu"};
+    
+    logoutBtn.onclick=()=>{auth.signOut(),log("Đã đăng xuất")};
+    
+    angleSlider0.oninput=()=>{const e=parseInt(angleSlider0.value);updateUI(0,e),db.ref("devices/"+DEVICE_ID+"/servo0/targetAngle").set(e),log(`Servo 0: ${e}°`)};
+    
+    angleSlider1.oninput=()=>{const e=parseInt(angleSlider1.value);updateUI(1,e),db.ref("devices/"+DEVICE_ID+"/servo1/targetAngle").set(e),log(`Servo 1: ${e}°`)};
+    
+    function attachDatabaseListeners(){db.ref("devices/"+DEVICE_ID+"/servo0/targetAngle").on("value",e=>{const t=e.val();"number"==typeof t&&(angleSlider0.value=t,updateUI(0,t))}),db.ref("devices/"+DEVICE_ID+"/servo0/currentAngle").on("value",e=>{const t=e.val();currentAngleSpan0.textContent="number"==typeof t?t:"-"}),db.ref("devices/"+DEVICE_ID+"/servo1/targetAngle").on("value",e=>{const t=e.val();"number"==typeof t&&(angleSlider1.value=t,updateUI(1,t))}),db.ref("devices/"+DEVICE_ID+"/servo1/currentAngle").on("value",e=>{const t=e.val();currentAngleSpan1.textContent="number"==typeof t?t:"-"})}
+    
+    updateUI(0,90),updateUI(1,90);
+  </script>
 </body>
 </html>

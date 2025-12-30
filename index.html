@@ -68,6 +68,9 @@
     .bubble:nth-child(4){left:70%;animation-delay:.5s}
     .bubble:nth-child(5){left:85%;animation-delay:1.5s}
     .cursor-fish{position:fixed;pointer-events:none;font-size:24px;z-index:9999}
+    .mode-btn{flex:1;padding:10px 20px;background:rgba(255,255,255,.08);border:2px solid rgba(106,169,255,.3);color:#6aa9ff;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;transition:all .3s}
+    .mode-btn:hover{background:rgba(106,169,255,.15);border-color:#6aa9ff}
+    .mode-btn.active{background:linear-gradient(135deg,#6aa9ff 0%,#4a8fd9 100%);border-color:#6aa9ff;color:white;box-shadow:0 4px 10px rgba(106,169,255,.3)}
     .btn-feed{width:100%;background:linear-gradient(135deg,#22c55e 0%,#16a34a 100%);color:white;margin-top:10px}
     
     .monitor-card,.control-card{background:rgba(17,24,51,.9);border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:20px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
@@ -157,6 +160,15 @@
           <div class="current-angle-info">Góc hiện tại từ ESP32: <span class="current-angle-value" id="currentAngle">-</span>°</div>
         </div>
         <button id="btnFeedNow" class="btn-feed">🍽️ Cho ăn ngay</button>
+        <div class="control-section" style="margin-top:15px">
+          <div class="control-title">⏰ Chế độ cho ăn tự động</div>
+          <div style="display:flex;gap:8px;justify-content:center">
+            <button class="mode-btn" data-mode="12">12h</button>
+            <button class="mode-btn" data-mode="24">24h</button>
+            <button class="mode-btn" data-mode="36">36h</button>
+          </div>
+          <div class="current-angle-info" style="margin-top:10px">Chế độ hiện tại: <span class="current-angle-value" id="currentMode">-</span></div>
+        </div>
       </div>
 
       <div class="monitor-card">
@@ -240,11 +252,12 @@
     const makePath=p=>`${getDevicePath()}/${p}`;
     let listeners=[];
     function unsubAll(){listeners.forEach(u=>{try{u()}catch(e){}});listeners=[]}
-    function subscribe(){unsubAll();log(`Subscribe: ${getDevicePath()}`);const add=(path,cb)=>{const u=onValue(ref(db,makePath(path)),cb,e=>log(`Error: ${e?.message||e}`));listeners.push(()=>u())};add("sensors/tempC",s=>{const v=s.val();$("tempC").textContent=v==null?"—":`${Number(v).toFixed(1)}°C`;if(typeof v==="number"){if(v>=27)setPill($("tempPill"),"bad","HOT");else if(v<=24)setPill($("tempPill"),"neutral","COOL");else setPill($("tempPill"),"good","OK")}else setPill($("tempPill"),"neutral","—")});add("servo0/targetAngle",s=>{const v=s.val();if(typeof v==="number"){$("angleSlider").value=String(v);updateAngle(v)}});add("servo0/currentAngle",s=>{$("currentAngle").textContent=s.val()==null?"—":String(s.val())});add("actuators/fan/state",s=>{const on=s.val()===1||s.val()===true;$("fanState").textContent=on?"ON":"OFF";setPill($("fanPill"),on?"good":"neutral",on?"RUNNING":"IDLE")});add("actuators/fan/mode",s=>{$("fanMode").value=s.val()==="manual"?"manual":"auto"});add("actuators/pump/state",s=>{const on=s.val()===1||s.val()===true;$("pumpState").textContent=on?"ON":"OFF";setPill($("pumpPill"),on?"good":"neutral",on?"RUNNING":"IDLE")});add("actuators/pump/mode",s=>{$("pumpMode").value=s.val()==="manual"?"manual":"auto"});add("actuators/pump/lastRunIso",s=>{$("pumpLastRun").textContent=s.val()==null?"—":String(s.val())})}
+    function subscribe(){unsubAll();log(`Subscribe: ${getDevicePath()}`);const add=(path,cb)=>{const u=onValue(ref(db,makePath(path)),cb,e=>log(`Error: ${e?.message||e}`));listeners.push(()=>u())};add("sensors/tempC",s=>{const v=s.val();$("tempC").textContent=v==null?"—":`${Number(v).toFixed(1)}°C`;if(typeof v==="number"){if(v>=27)setPill($("tempPill"),"bad","HOT");else if(v<=24)setPill($("tempPill"),"neutral","COOL");else setPill($("tempPill"),"good","OK")}else setPill($("tempPill"),"neutral","—")});add("servo0/targetAngle",s=>{const v=s.val();if(typeof v==="number"){$("angleSlider").value=String(v);updateAngle(v)}});add("servo0/currentAngle",s=>{$("currentAngle").textContent=s.val()==null?"—":String(s.val())});add("actuators/fan/state",s=>{const on=s.val()===1||s.val()===true;$("fanState").textContent=on?"ON":"OFF";setPill($("fanPill"),on?"good":"neutral",on?"RUNNING":"IDLE")});add("actuators/fan/mode",s=>{$("fanMode").value=s.val()==="manual"?"manual":"auto"});add("actuators/pump/state",s=>{const on=s.val()===1||s.val()===true;$("pumpState").textContent=on?"ON":"OFF";setPill($("pumpPill"),on?"good":"neutral",on?"RUNNING":"IDLE")});add("actuators/pump/mode",s=>{$("pumpMode").value=s.val()==="manual"?"manual":"auto"});add("actuators/pump/lastRunIso",s=>{$("pumpLastRun").textContent=s.val()==null?"—":String(s.val())});add("feeding/modeHours",s=>{const v=s.val();$("currentMode").textContent=v==null?"—":`${v}h`;document.querySelectorAll(".mode-btn").forEach(b=>{b.classList.toggle("active",Number(b.dataset.mode)===Number(v))})})}
     
     $("btnClearLog").onclick=()=>logEl.textContent="";
     $("angleSlider").addEventListener("input",()=>{const a=Number($("angleSlider").value);updateAngle(a);set(ref(db,makePath("servo0/targetAngle")),a);log(`Servo: ${a}°`)});
     $("btnFeedNow").onclick=async()=>{await set(ref(db,makePath("feeding/feedNow")),1);log("Feed now!")};
+    document.querySelectorAll(".mode-btn").forEach(btn=>{btn.onclick=async()=>{const mode=Number(btn.dataset.mode);await set(ref(db,makePath("feeding/modeHours")),mode);log(`Feeding mode: ${mode}h`)}});
     $("fanMode").addEventListener("change",async()=>{const m=$("fanMode").value;await set(ref(db,makePath("actuators/fan/mode")),m);log(`Fan mode: ${m}`)});
     $("btnFanOn").onclick=async()=>{await set(ref(db,makePath("actuators/fan/target")),1);log("Fan: ON")};
     $("btnFanOff").onclick=async()=>{await set(ref(db,makePath("actuators/fan/target")),0);log("Fan: OFF")};
